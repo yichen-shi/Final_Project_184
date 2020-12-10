@@ -1,0 +1,49 @@
+---
+title: 'Final Project: Guidance Document'
+author: "Yichen Shi"
+date: "Due December 11, 2020"
+output:  html_notebook
+---
+
+### Data Access
+
+(1) .Rmd Line numbers where at least two different data sources are imported:  
+**line 27 - 28**
+
+(2) .Rmd Line numbers for inspecting data intake:  
+**line 29 - 32**
+
+### Data Wrangling 
+
+(1) .Rmd Line number(s) for use of loops and/or control flow: 
+**line 44 - 68**
+
+(2) .Rmd Line number(s) for use of reduction and/or transformation functions: 
+**line 79 - 87**
+**line 93 - 94**
+
+(3) .Rmd Line number(s) for a join operation: 
+**line 105 - 110**
+
+
+(4) .Rmd Line number(s) for use of machine learning (not "wrangling" but scored here): 
+**line 120 - 121**
+
+(5) .Rmd Line number(s) for general data wrangling: 
+**line 165 - 169**
+
+
+### Data Visualization 
+
+(1) .Rmd Line number(s) for use of mulitple different geoms: 
+**line 132 geom_point, line 176 geom_bar, line 177 geom_errorbar**
+
+(2) .Rmd Line number(s) for use of multiple aesthetics:  
+**line 132 color, line 177 location**
+
+(3) .Rmd Line number(s) for use of layered graphics:  
+**line 176 and line 177, geom_bar and geom_errorbar**
+
+(4) .Rmd Line number(s) for use of leaflet maps:  
+**line 154 - 158**
+   

@@ -1,0 +1,60 @@
+---
+title: "Final Project Preliminary EDA"
+author: "Yichen Shi"
+output: html_notebook
+---
+
+### Research Question: 
+\newline "Is life expectancy of a country associated with its happiness?"
+
+```{r, message=FALSE, warning=FALSE}
+rm(list=ls())
+library(DataComputing)
+library(tidyr)
+library(mdsr)
+```
+
+### Examine the data source:
+* I uses two data: "Life Expectancy Data" and "World happiness report in 2015". The former one was orginally collected from WHO and the United Nations website from 2000-2015. The latter one was collected and published by the United Nations in 2015.
+* The case in life expectancy dataset represents the life expectancy scores and other related factors of each country from year 2000 to 2015. There are total of 2938 cases. There are missing values of population, Hepatitis B and GDP for those less known countries. 
+* The case in world happiness dataset represents the happiness score and other related scores of each country in 2015. There are total of 158 cases. There are no missing values in this dataset.
+* The variables I plan to use are country, year, life expectancy, GDP, schooling in "life expectancy data" and variables country, happiness score and region in "world happiness report". I then join this two datasets and named it "new_table" for analyzation.
+
+```{r}
+life_expect<-read.csv("Life Expectancy Data.csv")
+happiness<- read.csv("World happiness report in 2015.csv")
+life_expect%>%
+  head(5)
+summary(life_expect)
+happiness%>%
+  head(5)
+summary(happiness)
+
+```
+
+### Address Research Question:
+```{r, message=FALSE, warning=FALSE}
+new_table<-life_expect%>%
+  select(Country, Year, Life.expectancy, GDP, Schooling)%>%
+  filter(Year== 2015)%>%
+  inner_join(happiness%>%select(Country,Happiness.Score,Region),
+             by = c("Country" = "Country"))
+new_table%>%
+  ggplot(aes(x=Life.expectancy,y=Happiness.Score)) + geom_point()+
+  stat_smooth(method =lm)+
+  labs(x="Life Expectancy", y = "Happiness Score")
+```
+
+This graph gives me an intuition that life expectancy and happiness are strongly associated and has a positive relationship.
+```{r, message=FALSE, warning=FALSE}
+new_table%>%
+  ggplot(aes(x=Life.expectancy,y=Happiness.Score,color=Region)) + geom_point()+
+  stat_smooth(method =lm)+
+  labs(x="Life Expectancy", y = "Happiness Score")
+```
+
+Next, I group by the variable region and create a prediction line for each region. I find out that for some regions such as North America; Western Europe; Southern Asia, life expectancy and happiness has a strong positive relationship. However, for regions like Central and Estern Europe, Southern Asia, Sub-Saharan Africa, there have no signs of significant associations. 
+
+### Discover features in the data that may impact modeling decisions
+There may be other comfounding variables such as GDP, schooling that will affect happiness scores.
+

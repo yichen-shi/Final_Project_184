@@ -1,0 +1,192 @@
+---
+title: "Stat 184 Final Project"
+author: "Yichen Shi"
+date: "Dec 13, 2020"
+output: html_notebook
+---
+
+### Research Question: 
+#### "Is there a correlation between happiness and life expectancy?"
+
+### Introduction:
+
+* Staying happy is very important, but what factors exactly affect happiness? In my opinion, living longer may be contribute to that. In the following, I'm going to examine this correlation using the two datasets: "Life Expectancy Data" and "World happiness report in 2015".
+
+* The former one was orginally collected from WHO and the United Nations website. The latter one was collected and published by the United Nations.The case in life
+expectancy dataset represents the each country's life expectancy age and other related variables from year 2000 to 2015. There are total of 2938 cases and 183 countries.The case in world happiness dataset represents each countries' happiness score and other related factors of 158 countries in 2015. The variables I plan to use include country, life expectancy, happiness score, GDP, schooling, region.
+
+```{r, message=FALSE, warning=FALSE}
+rm(list=ls())
+library(DataComputing)
+library(tidyr)
+library(mdsr)
+```
+
+```{r,message=FALSE, warning=FALSE}
+# read and glimpse the datasets
+life_expect<-read.csv("Life Expectancy Data.csv")
+happiness<- read.csv("World happiness report in 2015.csv")
+life_expect%>%
+  head(10)
+happiness%>%
+  head(10)
+```
+
+### Data Wrangling:
+
+The first thing I am doing is choose the variables I want to use in each datasets. Here I want to use "Region" variable in "Happiness" table, but it contains too many categories. So, I create a new variable "continent" to summarise the categories.
+
+```{r, message=FALSE, warning=FALSE}
+happiness$continent = NA
+# inspect the regions and summarise the region into continent using the for loop.
+happiness%>%
+  distinct(Region)
+for (i in 1:nrow(happiness))
+{
+  if (happiness$Region[i] == "Eastern Asia"||
+      happiness$Region[i] == "Southeastern Asia"||
+      happiness$Region[i] == "Southern Asia" ||
+      happiness$Region[i] == "Middle East and Northern Africa")
+  {
+    happiness$continent[i] <- "Asia"
+  }
+  if (happiness$Region[i] == "North America"){
+    happiness$continent[i] <- "North America"
+  }
+  if (happiness$Region[i] == "Australia and New Zealand"){
+    happiness$continent[i] <- "Oceania"
+  }
+  if (happiness$Region[i] == "Latin America and Caribbean"){
+    happiness$continent[i] <- "South America"
+  }
+  if(happiness$Region[i]=="Western Europe" || happiness$Region[i]== "Central and Eastern Europe"){
+    happiness$continent[i] <- "Europe"
+  } 
+  if (happiness$Region[i]=="Sub-Saharan Africa"){
+     happiness$continent[i] <- "Africa"
+  }
+}
+
+happiness%>%
+  select(Country, continent)%>%
+  head(5)
+```
+
+Here, I want to format the variables in "Life Expectancy" table. I use the transformation function do the formating.
+
+```{r,message=FALSE, warning=FALSE}
+# Create the categories of life expectancy 
+life_expect<-life_expect%>%
+  mutate(life_expectancy_state= ifelse(Life.expectancy >= 80, "Greater than 80",
+       ifelse(Life.expectancy >= 75 & Life.expectancy < 80, "75~80",
+       ifelse(Life.expectancy >= 70 & Life.expectancy < 75, "70~75",
+       ifelse(Life.expectancy >= 65 & Life.expectancy < 70, "65~70",
+       ifelse(Life.expectancy >= 60 & Life.expectancy < 75, "60~65",
+       ifelse(Life.expectancy >= 55 & Life.expectancy < 60, "55~60",
+       ifelse(Life.expectancy >= 50 & Life.expectancy < 55, "50~55",
+       ifelse(Life.expectancy < 50, "less than 50", "other")))))))))
+
+# Since happiness dataset is year 2015, here I only choose year 2015 of life expectency data. 
+# I also change the unit of the variables to consistent with the happiness table
+life_expect <-life_expect%>%
+  filter(Year== 2015)%>%
+  mutate(life_expectancy_rate = round(Life.expectancy/100,digit=2),
+         schooling = round(Schooling/100,digit=2))
+
+life_expect%>%
+  select(Country,life_expectancy_rate,life_expectancy_state )%>%
+  head(5)
+```
+
+After formating variables, I can join the two dataset and create a combined table. Here, I join the tables based on country names and select the variables I want and rename them.
+
+```{r,warning=FALSE}
+# join the life expectancy and happiness graph
+combined_table<-life_expect%>%
+  select(Country, life_expectancy_rate,life_expectancy_state, Status, schooling)%>%
+  inner_join(happiness%>%select(Country,Happiness.Score,continent, Standard.Error,Economy..GDP.per.Capita., Freedom, Family),
+             by = c("Country" = "Country"))%>%
+  rename(GDP ="Economy..GDP.per.Capita.", happiness_score = "Happiness.Score", Happiness_score_se= Standard.Error, life_expectancy = "life_expectancy_rate")
+
+combined_table%>%
+  head(10)
+
+```
+
+Now I am done with data wrangling. Before going to data visualization, I want to roughly inspect the association between happiness score and other variables in the new table. I use machine learning to build the regression model. By looking at the coefficients, it seems that life expectancy has the strongest determination for happiness score.
+
+```{r, message=FALSE, warning=FALSE}
+#use exploratory models to find which variables relate to happiness most
+regressMod<-lm(happiness_score~life_expectancy+schooling+GDP+Freedom+Family, data=combined_table)
+regressMod$coefficients
+```
+
+
+### Data Visualization:
+
+Firstly, I use the scatterplot to see the relationship between happiness and life expectancy in different continent.For most continent, there appears strongly positive relationship.
+
+```{r, warning=FALSE}
+# correlation between life expectancy age and happiness in different continent group
+combined_table%>%
+  ggplot(aes(x=life_expectancy,y=happiness_score,color=continent)) + geom_point()+
+  stat_smooth(method =lm)+
+  labs(x="Life Expectancy", y = "Happiness Score")+
+  ggtitle("Happiness and life expectancy relation in different continent ")+
+  theme(plot.title=element_text(size=10,face="bold"))
+```
+
+Next, I compare the relationship between happiness and life expectancy considering developed and developing countries. The life expectancy for developed countries are higher than developing countries and in each group, there's positive relations.
+
+```{r,warning=FALSE}
+combined_table %>%
+  ggplot(aes(y= happiness_score, x = life_expectancy)) + 
+  geom_point() +facet_wrap(~Status) +
+  scale_x_continuous(breaks=seq(0.5,1,by=0.05))+
+  ggtitle("Happiness and life expectancy relation of countries in different status ")+
+  theme(plot.title=element_text(size=10,face="bold"),
+        axis.text.x= element_text(angle=45))
+```
+
+Here I make an interesting map according to happiness and life expectancy value to compare.
+
+```{r,message=FALSE, warning=FALSE}
+m1<-combined_table%>%
+  WorldMap(key=Country, fill=happiness_score)
+m2<- combined_table%>%
+  WorldMap(key=Country, fill= life_expectancy)
+grid.arrange(m1, m2)
+
+```
+
+Finally, I make a bar graph to compare the different life expectancy age groups with mean happiness score in that group. I also put additional layer of confidence interval of happiness score. By looking at this graph, it is obvious that the group with higher expected age has a higher happiness score.
+
+```{r}
+summary_stat <-
+  combined_table %>%
+  group_by(life_expectancy_state) %>%
+  summarise(mn_happy = mean(happiness_score),
+            se = mean(Happiness_score_se)) 
+summary_stat <- 
+  summary_stat %>%
+  mutate(top = mn_happy + 2 * se,
+         bottom = mn_happy - 2 * se) 
+summary_stat %>%
+  ggplot(aes(x = life_expectancy_state, y = exp(mn_happy))) +
+  geom_bar(stat = "identity", alpha=0.2) +
+  geom_errorbar(aes(x = life_expectancy_state, 
+                    ymax = exp(top), 
+                    ymin =exp(bottom)), width=0.5) +
+  theme(axis.text.x = element_text(angle = 30, hjust=1,color="blue"))+
+    labs(x="Life Expectancy Range", y = "Mean Happiness Score")
+
+```
+
+### Conclusion
+
+By comparing life expectancy and happiness score under different continent, developing status, and life expectancy range, there is a positive relationship between life expectancy and happiness. Therefore, life expectancy does influence our happiness.
+
+### Sources
+* Life Expectancy (WHO), https://www.kaggle.com/kumarajarshi/life-expectancy-who 
+* World Happiness Report, https://www.kaggle.com/unsdsn/world-happiness
+
